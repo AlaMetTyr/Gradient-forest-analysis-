@@ -1,0 +1,98 @@
+###This script has been adapted from online resources for analysis of SNP allele frequency data for the invasomics for biosecurity project###
+
+## Load required Libraries ##
+require(raster)
+require(rgdal)
+require (vcfR)
+library(gradientForest)
+library(vegan)
+
+## load data files ##
+snp <- read.table("pop_alleleFreq.txt", header = T, row.names = NULL)
+sample.coord <-read.table("cs.sample.location.txt", header=T, stringsAsFactors=F)
+
+## Using vegan to sort sample data ##
+coord <- sample.coord[,c("longitude","latitude")]
+pcnm <- pcnm(dist(coord))  # this generates the PCNMs, you could stop here if you want all of them
+keep <- round(length(which(pcnm$value > 0))/2)
+pcnm.keep <- scores(pcnm)[,1:keep]  # keep half of positive ones as suggested by some authors
+write.table(pcnm.keep, "pcnm.keep", sep="\t", quote=F, row.names=F) 
+pcnm.keep
+
+clim.list <- dir("./Bioclim data/", full.names=T, pattern='.tif') # load climate data
+clim.layer <- stack(clim.list) # stack into a single climate layer
+extent <- c(-149, 168, -37, -11) # define the extent of the latitude and longitude
+clim.layer.crop <- crop(clim.layer, extent) # crop the climate data layers
+
+crs.wgs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"  # defines the spatial projection system that the points are in (usually WGS84)
+sample.coord.sp <- SpatialPointsDataFrame(sample.coord[,c('longitude','latitude')], proj4string=CRS(crs.wgs), data=sample.coord)
+
+clim.points <- extract(clim.layer.crop, sample.coord.sp) # data extraction on each data point
+clim.points <- cbind(sample.coord, clim.points) # combine data with bio data
+write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F) 
+clim.points
+
+env.gf <- cbind(clim.points[ , c("bio_3", "bio_5", "bio_8", "bio_9", "bio_12", "bio_19") ], pcnm.keep)
+
+
+#### this is the start of the gradient forest analysis ####
+
+maxLevel <- log2(0.368*nrow(env.gf)/2)
+gf <- gradientForest(cbind(env.gf, snp), predictor.vars=colnames(env.gf), response.vars=colnames(snp), ntree=1000, maxLevel=maxLevel, trace=T, corr.threshold=0.50)
+
+save.image("cs.gf.data")
+
+###plot bar graphs depicting the importance of each spatial and climate variable###
+pdf("GF_VariableImportance.pdf")
+plot(gf, plot.type = "O")
+dev.off()
+
+###plot the "turnover functions" showing how allele composition changes along the spatial or environmental gradients. 
+by.importance <- names(importance(gf))
+pdf("GF_TurnoverFunctions.pdf")
+plot(gf, plot.type = "C", imp.vars = by.importance, show.species = F, common.scale = T, cex.axis = 1, cex.lab = 1.2, line.ylab = 1, par.args = list(mgp = c(1.5, 0.5, 0), mar = c(2.5, 2, 2, 2), omi = c(0.2, 0.3, 0.2, 0.4)))
+dev.off()
+
+pdf("GF_TurnoverFunctions_bySNP.pdf")
+plot(gf, plot.type = "C", imp.vars = by.importance, show.overall = F, legend = T, leg.posn = "topleft", leg.nspecies = 5, cex.lab = 0.7, cex.legend = 0.4, cex.axis = 0.6, ylim = c(0, 0.5), line.ylab = 0.9, par.args = list(mgp = c(1.5, 0.5, 0), mar = c(2.5, 1, 0.1, 0.5), omi = c(0, 0.3, 0, 0)))
+dev.off()
+
+
+## projecting results across landscape not fully sampled####
+# Spatial mapping
+# If have tidyr loaded unload as the extract function masks that from raster
+clim.land <- extract(clim.layer.crop, 1:ncell(clim.layer.crop), df = TRUE)
+clim.land <- na.omit(clim.land)
+clim.land_subset=subset(clim.land, select = -c(wc2.1_10m_bio_1, wc2.1_10m_bio_2, wc2.1_10m_bio_4, wc2.1_10m_bio_6, wc2.1_10m_bio_7, wc2.1_10m_bio_10, wc2.1_10m_bio_11, wc2.1_10m_bio_13, wc2.1_10m_bio_14, wc2.1_10m_bio_15, wc2.1_10m_bio_16, wc2.1_10m_bio_17, wc2.1_10m_bio_18))
+colnames(clim.land_subset) <- c("ID","bio_12", "bio_19", "bio_3", "bio_5","bio_8", "bio_9")
+
+pred <- predict(gf, clim.land_subset[,-1])  # removal of the cell ID column with 
+
+pca <- prcomp(pred, center=T, scale.=F)
+
+# Assign PCs to colors
+r <- pca$x[, 1]
+g <- pca$x[, 2]
+b <- pca$x[, 3]
+
+#Scale colors
+r <- (r - min(r))/(max(r) - min(r)) * 255
+g <- (g - min(g))/(max(g) - min(g)) * 255
+b <- (b - min(b))/(max(b) - min(b)) * 255
+
+# Define raster properties with existing one
+mask <- clim.layer.crop$wc2.1_10m_bio_19
+
+# Assign color to raster
+rastR <- rastG <- rastB <- mask
+rastR[clim.land_subset$ID] <- r
+rastG[clim.land_subset$ID] <- g
+rastB[clim.land_subset$ID] <- b
+
+# Stack color rasters
+rgb.rast <- stack(rastR, rastG, rastB)
+
+pdf("GF_Map_bio19.pdf")
+plotRGB(rgb.rast, bgalpha=0)
+points(clim.points$Longitude, clim.points$Latitude)
+dev.off()

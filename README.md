@@ -7,9 +7,11 @@ R script this analysis was based off was found in the Dryad repository for the a
 
 ## External software install- gradientforest
 install.packages("gradientForest", repos="http://R-Forge.R-project.org")
+
 install.packages("extendedForest", repos="http://R-Forge.R-project.org")
 
 ## Libraries installed and used
+
 library(tidyr)
 library(sp)
 require(raster)

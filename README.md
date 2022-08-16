@@ -17,17 +17,17 @@ install.packages("extendedForest", repos="http://R-Forge.R-project.org")
 ## Libraries installed and used
 
 
-library(tidyr)
+`library(tidyr)`
 
-library(sp)
+`library(sp)`
 
-require(raster)
+`require(raster)`
 
-require(rgdal)
+`require(rgdal)`
 
-library(tidyr)
+`library(tidyr)`
 
-library(sp)
+`library(sp)`
 
 
 ## Generating of input files

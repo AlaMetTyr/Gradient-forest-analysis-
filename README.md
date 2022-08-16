@@ -5,8 +5,20 @@ https://onlinelibrary.wiley.com/doi/full/10.1111/mec.16055.
 
 R script this analysis was based off was found in the Dryad repository for the above paper https://datadryad.org/stash/dataset/doi:10.5061/dryad.m0cfxpp20 with changes an clarifications for further dependecies and specifics for this analysis outlined below.
 
+## External software install- gradientforest
+install.packages("gradientForest", repos="http://R-Forge.R-project.org")
+install.packages("extendedForest", repos="http://R-Forge.R-project.org")
 
-#Generating of input files
+## Libraries installed and used
+library(tidyr)
+library(sp)
+require(raster)
+require(rgdal)
+library(tidyr)
+library(sp)
+
+
+## Generating of input files
 SNP frequency files and climate data for each sample provided by Elahe Parvizi.
 World climate data generated from bioclim data https://www.worldclim.org/data/worldclim21.html.
 
@@ -20,6 +32,6 @@ clim.points <- cbind(sample.coord, clim.points)
 write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F)  
 
 
-# Altering previously defined scripts for filtering to this analysis
+## Altering previously defined scripts for filtering to this analysis
 env.gf variable was filtered based on climate/ variable corerlation analysis between worldclim and sampling locations. this narrowed down to 6 bioclimactic variables:
 `env.gf <- cbind(clim.points[ , c("bio_3", "bio_5", "bio_8", "bio_9", "bio_12", "bio_19") ], pcnm.keep) `

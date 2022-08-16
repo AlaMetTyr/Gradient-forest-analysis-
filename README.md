@@ -17,17 +17,17 @@ install.packages("extendedForest", repos="http://R-Forge.R-project.org")
 ## Libraries installed and used
 
 
-`library(tidyr)`
+`library(tidyr)
 
-`library(sp)`
+library(sp)
 
-`require(raster)`
+require(raster)
 
-`require(rgdal)`
+require(rgdal)
 
-`library(tidyr)`
+library(tidyr)
 
-`library(sp)`
+library(sp)`
 
 
 ## Generating of input files
@@ -43,14 +43,14 @@ Files generated in r for clim. list, making list of paths for each layer
 
 Then stacked into a single object:
 
-` clim.layer <-  stack(clim.list) `
+` clim.layer <-  stack(clim.list) 
 
 
-`clim.points <- extract(clim.layer.crop, sample.coord.sp) `
+clim.points <- extract(clim.layer.crop, sample.coord.sp) 
 
-`clim.points <- cbind(sample.coord, clim.points)  `
+clim.points <- cbind(sample.coord, clim.points)  
 
-`write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F)  `
+write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F)  `
 
 
 ## Altering previously defined scripts for filtering to this analysis
@@ -63,17 +63,17 @@ env.gf variable was filtered based on climate/ variable corerlation analysis bet
 
 crop climate data layers to just the area included in the analysis
 
-`extent <- c(-150, 167, 5, 22) `
+`extent <- c(-150, 167, 5, 22) 
 
-`clim.layer.crop <- crop(clim.layer, extent)`
+clim.layer.crop <- crop(clim.layer, extent)`
 
 Plot maps of cropped layers
 
-`pdf("clim.layer.crop.pdf")`
+pdf("clim.layer.crop.pdf")
 
-`plot(clim.layer.crop)`
+plot(clim.layer.crop)
 
-`dev.off()`
+dev.off()`
 
 ###Spatial mapping- if have tidyr loaded unload as the extract function masks that from raster
 

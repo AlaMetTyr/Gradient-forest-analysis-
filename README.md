@@ -41,16 +41,16 @@ Files generated in r for clim. list, making list of paths for each layer
 
 `clim.list <- dir("./Climate_Data/", full.names=T, pattern='.tif') `
 
-Then stacked into a single object
+Then stacked into a single object:
 
 ` clim.layer <-  stack(clim.list) `
 
 
-clim.points <- extract(clim.layer.crop, sample.coord.sp) 
+`clim.points <- extract(clim.layer.crop, sample.coord.sp) `
 
-clim.points <- cbind(sample.coord, clim.points)  
+`clim.points <- cbind(sample.coord, clim.points)  `
 
-write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F)  
+`write.table(clim.points, "clim.points", sep="\t", quote=F, row.names=F)  `
 
 
 ## Altering previously defined scripts for filtering to this analysis

@@ -96,3 +96,112 @@ pdf("GF_Map_bio19.pdf")
 plotRGB(rgb.rast, bgalpha=0)
 points(clim.points$Longitude, clim.points$Latitude)
 dev.off()
+
+
+### BELOW IS THE SCRIPT FOR REPEATING THE GF USING ADAPTIVE SNPS DERIVED FROM LFMM ANALYSIS, AND DOWNSTREAM COMPARISON BETWEEN ADAPTIVE AND ALL SNPS ###  
+
+#create new snps file with only adaptive snps extracted frm earlier allele freq
+snp_adaptive <- snp[c("row.names","Group.1","NC_052499.1_28942220",
+               "NC_052500.1_21270073",
+               "NC_052500.1_29830819",
+               "NC_052503.1_68296230",
+               "NC_052503.1_77058621",
+               "NW_024395654.1_20578",
+               "NC_052499.1_77053547",
+               "NC_052501.1_3564927",
+               "NC_052501.1_78368258",
+               "NC_052502.1_19606449",
+               "NC_052503.1_48684533",
+               "NC_052499.1_43331195",
+               "NC_052499.1_56113418",
+               "NC_052499.1_71712748",
+               "NC_052499.1_80928661",
+               "NC_052500.1_27860731",
+               "NC_052501.1_70268991",
+               "NC_052502.1_49352047",
+               "NC_052499.1_17273194",
+               "NC_052500.1_32872840",
+               "NC_052500.1_74564278",
+               "NC_052501.1_72236076",
+               "NC_052502.1_11821013",
+               "NC_052502.1_29460735",
+               "NC_052503.1_10795028",
+               "NC_052503.1_75565981",
+               "NW_024396366.1_8709520",
+               "NC_052501.1_3928395",
+               "NC_052501.1_5904221",
+               "NC_052501.1_85035648",
+               "NC_052502.1_43460185",
+               "NC_052502.1_52447769",
+               "NC_052503.1_5707479")]
+
+#repeat gradient forest
+maxLevel <- log2(0.368*nrow(env.gf)/2)
+gf.adaptive <- gradientForest(cbind(env.gf, snp_adaptive), predictor.vars=colnames(env.gf), response.vars=colnames(snp_adaptive), ntree=1000, maxLevel=maxLevel, trace=T, corr.threshold=0.50)
+
+save.image("cs.gf_adaptive.data")
+
+###plot bar graphs depicting the importance of each spatial and climate variable###
+pdf("GF_VariableImportance_adaptive.pdf")
+plot(gf.adaptive, plot.type = "O")
+dev.off()
+
+###plot the "turnover functions" showing how allele composition changes along the spatial or environmental gradients. 
+by.importance <- names(importance(gf))
+pdf("GF_TurnoverFunctions_adaptive.pdf")
+plot(gf.adaptive, plot.type = "C", imp.vars = by.importance, show.species = F, common.scale = T, cex.axis = 1, cex.lab = 1.2, line.ylab = 1, par.args = list(mgp = c(1.5, 0.5, 0), mar = c(2.5, 2, 2, 2), omi = c(0.2, 0.3, 0.2, 0.4)))
+dev.off()
+
+pdf("GF_TurnoverFunctions_bySNP_adaptive.pdf")
+plot(gf.adaptive, plot.type = "C", imp.vars = by.importance, show.overall = F, legend = T, leg.posn = "topleft", leg.nspecies = 5, cex.lab = 0.7, cex.legend = 0.4, cex.axis = 0.6, ylim = c(0, 0.5), line.ylab = 0.9, par.args = list(mgp = c(1.5, 0.5, 0), mar = c(2.5, 1, 0.1, 0.5), omi = c(0, 0.3, 0, 0)))
+dev.off()
+
+
+## projecting results across landscape not fully sampled##
+# Spatial mapping
+# If have tidyr loaded unload as the extract function masks that from raster
+clim.land <- extract(clim.layer.crop, 1:ncell(clim.layer.crop), df = TRUE)
+clim.land <- na.omit(clim.land)
+clim.land_subset=subset(clim.land, select = -c(wc2.1_10m_bio_1, wc2.1_10m_bio_2, wc2.1_10m_bio_4, wc2.1_10m_bio_6, wc2.1_10m_bio_7, wc2.1_10m_bio_10, wc2.1_10m_bio_11, wc2.1_10m_bio_13, wc2.1_10m_bio_14, wc2.1_10m_bio_15, wc2.1_10m_bio_16, wc2.1_10m_bio_17, wc2.1_10m_bio_18))
+colnames(clim.land_subset) <- c("ID","bio_12", "bio_19", "bio_3", "bio_5","bio_8", "bio_9")
+
+pred.adaptive <- predict(gf, clim.land_subset[,-1])  # removal of the cell ID column with 
+
+pca.adaptive <- prcomp(pred, center=T, scale.=F)
+
+
+###compare overall and adaptive genetic variation####
+
+#Extract cumulative importance data from GF results. Note that these commands retrieve all the predictors, despite specifying only one. Also note that you could set type="Species" if you want to extract data for individual loci.
+gf.cumimp <- cumimp(gf, predictor="PCNM1", type="Overall")
+gf.adaptive.cumimp <- cumimp(gf.adaptive, predictor="PCNM1", type="Overall" )
+
+pdf("Comparison_PCNM1.pdf")
+plot(cumimp(gf.adaptive, "PCNM1", standardize=FALSE), main="", ylab="Cumulative importance", xlab='PCNM1', type='l', lwd=2, lty="dashed", col="red")
+lines(cumimp(gf, "PCNM1"),type='l',col="black", lwd=2)
+legend("topleft", box.lty=0, legend=c("All", "Adaptive"), lwd=c(2,2), col=c("black", "red"), lty=c("solid", "dashed"))
+dev.off()
+
+pdf("Comparison_bio_9.pdf")
+plot(cumimp(gf.adaptive, "bio_9", standardize=FALSE), main="", ylab="Cumulative importance", xlab=' Mean Temperature of Driest Quarter', type='l', lwd=2, lty="dashed", col="red")
+lines(cumimp(gf, "bio_9"),type='l',col="black", lwd=2)
+legend("topleft",box.lty=0, legend=c("All", "Adaptive"), lwd=c(2,2), col=c("black","red"), lty=c("solid","dashed"))
+dev.off()
+
+##where does adaptive variation deviate most
+diff.procrustes = procrustes(pca.adaptive, pca, scale=TRUE, symmetrical=FALSE)
+resids = residuals(diff.procrustes)
+
+#Specify raster properties based on an existing one
+rastProc <- clim.layer.crop$wc2.1_10m_bio_12 
+
+#Assign residuals to raster cells
+rastProc[clim.land$ID] <- resids  
+
+#Map the results
+pdf("ProcrustesMap.pdf")
+plot(rastProc, col = rev( rainbow( 99, start = 0, end = 0.2 ) ))
+points(clim.points$Longitude, clim.points$Latitude)
+dev.off()
+
+
